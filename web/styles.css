@@ -55,6 +55,18 @@ header {
   gap: 12px;
 }
 
+.brand-logo-img {
+  height: 40px;
+  max-width: 140px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+  transition: transform 0.2s ease;
+}
+
+.brand-logo-img:hover {
+  transform: scale(1.05);
+}
+
 .brand-icon {
   font-size: 24px;
   background: linear-gradient(135deg, #ec4899, #8b5cf6);
@@ -323,6 +335,20 @@ textarea.form-control {
   padding: 20px;
   background: radial-gradient(circle, #1a1e2d 0%, #0d0f15 100%);
   position: relative;
+  overflow: hidden;
+}
+
+/* Marca de agua sutil de AKDYA de fondo en el área de trabajo */
+.preview-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("assets/logo.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 320px;
+  opacity: 0.04;
+  pointer-events: none;
 }
 
 /* Mockup Adaptable: 9:16 vertical, 16:9 horizontal, 1:1 cuadrado */
