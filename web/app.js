@@ -15,6 +15,7 @@ const selectCanal = document.getElementById("selectCanal");
 const selectProyecto = document.getElementById("selectProyecto");
 const btnNuevoProyecto = document.getElementById("btnNuevoProyecto");
 const btnGuardarGuion = document.getElementById("btnGuardarGuion");
+const btnAgregarEscena = document.getElementById("btnAgregarEscena");
 const btnComenzarEdicion = document.getElementById("btnComenzarEdicion");
 const contenedorEscenas = document.getElementById("contenedorEscenas");
 const selectFormato = document.getElementById("selectFormato");
@@ -191,8 +192,9 @@ function renderizarProyecto() {
   // 1. Renderizar lista de escenas
   contenedorEscenas.innerHTML = "";
   escenas.forEach((escena, idx) => {
+    const activa = escena.activa !== false;
     const card = document.createElement("div");
-    card.className = `scene-card ${idx === escenaSeleccionadaIdx ? "active" : ""}`;
+    card.className = `scene-card ${idx === escenaSeleccionadaIdx ? "active" : ""} ${activa ? "" : "disabled"}`;
     card.dataset.index = idx;
 
     const existeVideo = datosProyecto.archivos_existentes && datosProyecto.archivos_existentes[escena.video];
@@ -202,10 +204,16 @@ function renderizarProyecto() {
     
     card.innerHTML = `
       <div class="scene-card-header">
-        <span class="scene-badge">Escena ${idx + 1}</span>
-        <div class="scene-file">
-          <span class="file-status ${existeVideo ? 'status-ok' : 'status-missing'}" title="${existeVideo ? 'Video listo' : 'Falta archivo de video'}"></span>
-          <span>${escena.video} (~${durV.toFixed(1)}s)</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" class="check-escena-activa" data-index="${idx}" ${activa ? "checked" : ""} title="Marcar para incluir en la edición / Desmarcar para excluir">
+          <span class="scene-badge">Escena ${idx + 1}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="scene-file">
+            <span class="file-status ${existeVideo ? 'status-ok' : 'status-missing'}" title="${existeVideo ? 'Video listo' : 'Falta archivo de video'}"></span>
+            <span>${escena.video} (~${durV.toFixed(1)}s)</span>
+          </div>
+          <button class="btn-eliminar-escena" data-index="${idx}" title="Eliminar escena">🗑️</button>
         </div>
       </div>
 
@@ -236,7 +244,12 @@ function renderizarProyecto() {
 
     // Clic en la tarjeta para previsualizar
     card.addEventListener("click", (e) => {
-      if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA" && !e.target.classList.contains("dropzone")) {
+      if (
+        e.target.tagName !== "INPUT" &&
+        e.target.tagName !== "TEXTAREA" &&
+        !e.target.classList.contains("dropzone") &&
+        !e.target.classList.contains("btn-eliminar-escena")
+      ) {
         seleccionarEscena(idx);
       }
     });
@@ -244,7 +257,38 @@ function renderizarProyecto() {
     contenedorEscenas.appendChild(card);
   });
 
-  // 2. Configurar inputs para actualización en tiempo real
+  // 2. Eventos para checkboxes de activación y botones de eliminación
+  document.querySelectorAll(".check-escena-activa").forEach(chk => {
+    chk.addEventListener("change", (e) => {
+      e.stopPropagation();
+      const i = parseInt(e.target.dataset.index);
+      escenas[i].activa = e.target.checked;
+      const card = e.target.closest(".scene-card");
+      if (card) {
+        card.classList.toggle("disabled", !e.target.checked);
+      }
+      actualizarLineaTiempo();
+    });
+  });
+
+  document.querySelectorAll(".btn-eliminar-escena").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const i = parseInt(btn.dataset.index);
+      if (escenas.length <= 1) {
+        mostrarNotificacion("El video debe tener al menos una escena", "info");
+        return;
+      }
+      escenas.splice(i, 1);
+      if (escenaSeleccionadaIdx >= escenas.length) {
+        escenaSeleccionadaIdx = Math.max(0, escenas.length - 1);
+      }
+      renderizarProyecto();
+      mostrarNotificacion(`Escena ${i + 1} eliminada`, "info");
+    });
+  });
+
+  // 3. Configurar inputs para actualización en tiempo real
   document.querySelectorAll(".input-texto-pantalla").forEach(input => {
     input.addEventListener("input", (e) => {
       const i = parseInt(e.target.dataset.index);
@@ -323,21 +367,30 @@ function seleccionarEscena(idx) {
     c.classList.toggle("active", i === idx);
   });
 
-  if (!datosProyecto || !datosProyecto.guion.escenas[idx]) return;
+  if (!datosProyecto || !datosProyecto.guion || !datosProyecto.guion.escenas[idx]) return;
   const escena = datosProyecto.guion.escenas[idx];
 
-  // Actualizar texto en pantalla vertical 9:16
+  // Actualizar texto en pantalla
   screenOverlayText.textContent = checkSinTexto.checked ? "" : (escena.texto_pantalla || "");
 
   // Si el video de la escena existe en la carpeta, cargarlo en el preview
   const existeVideo = datosProyecto.archivos_existentes && datosProyecto.archivos_existentes[escena.video];
   if (existeVideo) {
-    const videoUrl = `/media/${canalActual}/${proyectoActual}/${escena.video}`;
-    videoPreview.src = videoUrl;
+    const videoUrl = `/media/${encodeURIComponent(canalActual)}/${encodeURIComponent(proyectoActual)}/${encodeURIComponent(escena.video)}`;
+    if (videoPreview.getAttribute("data-src") !== videoUrl) {
+      videoPreview.setAttribute("data-src", videoUrl);
+      videoPreview.src = videoUrl;
+      videoPreview.load();
+    }
     videoPreview.style.display = "block";
     screenPlaceholder.style.display = "none";
-    videoPreview.play().catch(() => {});
+    videoPreview.play().catch(err => {
+      console.log("Reproducción automática no permitida o pausada:", err);
+    });
   } else {
+    videoPreview.pause();
+    videoPreview.removeAttribute("src");
+    videoPreview.removeAttribute("data-src");
     videoPreview.style.display = "none";
     screenPlaceholder.style.display = "flex";
   }
@@ -352,8 +405,15 @@ function actualizarLineaTiempo() {
   pistaTexto.innerHTML = "";
 
   let duracionTotal = 0;
+  let escenasActivasCount = 0;
 
   escenas.forEach((escena, idx) => {
+    // Si la escena fue desmarcada, no se añade a la línea de tiempo
+    if (escena.activa === false) {
+      return;
+    }
+    escenasActivasCount++;
+
     const durV = datosProyecto.duraciones_video ? (datosProyecto.duraciones_video[escena.video] || 10) : 10;
     // Estimación de duración de voz: aprox 14 caracteres por segundo en español hablado
     const longitudTexto = (escena.texto_voz || "").trim().length;
@@ -403,7 +463,12 @@ function actualizarLineaTiempo() {
     pistaTexto.appendChild(clipT);
   });
 
-  duracionEstimada.textContent = `Duración estimada: ~${duracionTotal.toFixed(1)}s`;
+  if (escenasActivasCount === 0) {
+    duracionEstimada.textContent = "⚠️ Ninguna escena activa seleccionada";
+    pistaVideo.innerHTML = "<div style='color: var(--text-dim); padding: 8px;'>Marca al menos una escena para incluirla en la edición.</div>";
+  } else {
+    duracionEstimada.textContent = `Duración estimada (${escenasActivasCount} escenas): ~${duracionTotal.toFixed(1)}s`;
+  }
 }
 
 
@@ -554,6 +619,24 @@ async function guardarGuion(silencioso = false) {
 
 btnGuardarGuion.addEventListener("click", () => guardarGuion(false));
 
+if (btnAgregarEscena) {
+  btnAgregarEscena.addEventListener("click", () => {
+    if (!datosProyecto || !datosProyecto.guion) return;
+    if (!datosProyecto.guion.escenas) datosProyecto.guion.escenas = [];
+    const escenas = datosProyecto.guion.escenas;
+    const nextNum = escenas.length + 1;
+    escenas.push({
+      video: `escena-${nextNum}.mp4`,
+      texto_pantalla: `ESCENA ${nextNum}`,
+      texto_voz: `Texto narrado para la escena ${nextNum}...`,
+      activa: true
+    });
+    renderizarProyecto();
+    seleccionarEscena(escenas.length - 1);
+    mostrarNotificacion(`✓ Escena ${nextNum} añadida al guion`);
+  });
+}
+
 selectVolumenVideo.addEventListener("change", () => {
   actualizarLineaTiempo();
 });
@@ -587,6 +670,12 @@ checkSinTexto.addEventListener("change", () => {
 btnComenzarEdicion.addEventListener("click", async () => {
   if (!canalActual || !proyectoActual) {
     mostrarNotificacion("Selecciona un canal y proyecto primero.", "info");
+    return;
+  }
+
+  const escenasActivas = (datosProyecto?.guion?.escenas || []).filter(e => e.activa !== false);
+  if (escenasActivas.length === 0) {
+    mostrarNotificacion("Debes marcar al menos una escena para comenzar la edición.", "info");
     return;
   }
 
@@ -847,6 +936,27 @@ function configurarEventos() {
   btnCerrarCompilador.addEventListener("click", () => {
     modalCompilador.style.display = "none";
   });
+
+  const btnAutocompletarVideosCompilador = document.getElementById("btnAutocompletarVideosCompilador");
+  if (btnAutocompletarVideosCompilador) {
+    btnAutocompletarVideosCompilador.addEventListener("click", () => {
+      if (!datosProyecto || !datosProyecto.guion) return;
+      const textarea = document.getElementById("compiladorListaVideos");
+      const rutas = [];
+      const escenas = datosProyecto.guion.escenas || [];
+      escenas.forEach((escena) => {
+        if (escena.activa !== false) {
+          rutas.push(`${canalActual}/${proyectoActual}/escenas/${escena.video}`);
+        }
+      });
+      if (rutas.length > 0) {
+        textarea.value = rutas.join("\n");
+        mostrarNotificacion(`✓ ${rutas.length} escenas añadidas a la lista`);
+      } else {
+        mostrarNotificacion("No hay escenas activas en el proyecto actual", "info");
+      }
+    });
+  }
 
   btnEjecutarCompilacion.addEventListener("click", async () => {
     const texto = document.getElementById("compiladorListaVideos").value.trim();

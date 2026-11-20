@@ -63,14 +63,24 @@
       <!-- Panel Izquierdo: Gestión de Escenas y Guion -->
       <div class="scenes-panel">
         <div class="panel-header">
-          <h2>Escenas del Video (Guion)</h2>
-          <button
-            class="btn btn-secondary"
-            id="btnGuardarGuion"
-            style="padding: 4px 10px; font-size: 11px"
-          >
-            💾 Guardar Guion
-          </button>
+          <h2>Escenas del Video</h2>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button
+              class="btn btn-primary"
+              id="btnAgregarEscena"
+              title="Añadir una nueva escena a este video"
+              style="padding: 4px 10px; font-size: 11px; background: #6366f1;"
+            >
+              ➕ Añadir Escena
+            </button>
+            <button
+              class="btn btn-secondary"
+              id="btnGuardarGuion"
+              style="padding: 4px 10px; font-size: 11px"
+            >
+              💾 Guardar
+            </button>
+          </div>
         </div>
 
         <div class="scenes-list" id="contenedorEscenas">
@@ -194,9 +204,9 @@
               <video
                 id="videoPreview"
                 loop
-                muted
                 playsinline
-                style="display: none"
+                controls
+                style="display: none; width: 100%; height: 100%; object-fit: cover;"
               ></video>
               <div id="screenPlaceholder" class="screen-placeholder">
                 <img src="assets/logo.png" alt="AKDYA Logo" style="max-width: 95px; max-height: 75px; object-fit: contain; margin-bottom: 12px; filter: drop-shadow(0 4px 14px rgba(0,0,0,0.7)); opacity: 0.95;" />
@@ -413,11 +423,22 @@
           continuo:
         </p>
         <div class="form-group">
-          <label>Rutas de videos a unir (un archivo por línea):</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label style="margin: 0;">Rutas de videos a unir (un archivo por línea):</label>
+            <button
+              class="btn btn-secondary"
+              id="btnAutocompletarVideosCompilador"
+              type="button"
+              style="padding: 2px 8px; font-size: 11px;"
+              title="Inserta automáticamente las escenas del proyecto actual"
+            >
+              ⚡ Cargar escenas del proyecto
+            </button>
+          </div>
           <textarea
             id="compiladorListaVideos"
             class="form-control"
-            style="min-height: 100px"
+            style="min-height: 110px"
             placeholder="C:\videos\video1.mp4&#10;C:\videos\video2.mp4"
           ></textarea>
         </div>

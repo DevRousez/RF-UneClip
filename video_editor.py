@@ -1006,12 +1006,18 @@ def ejecutar_edicion(
     voz = voz_override or datos_guion.get("voz", VOZ_DEFECTO)
     formato_final = formato or datos_guion.get("formato", "9:16")
     ancho, alto = obtener_dimensiones_formato(formato_final)
-    escenas = datos_guion["escenas"]
+    
+    # Filtrar solo las escenas marcadas como activas
+    todas_escenas = datos_guion.get("escenas", [])
+    escenas = [e for e in todas_escenas if e.get("activa", True) is not False]
+    if not escenas:
+        raise ValueError("No hay escenas activas marcadas para procesar. Marca la casilla de al menos una escena.")
     
     print("=" * 70)
     print(f"🎬 INICIANDO EDICIÓN AUTOMATIZADA: {titulo}")
     print(f"📂 Carpeta de trabajo: {carpeta}")
     print(f"📐 Formato de video: {formato_final} ({ancho}x{alto})")
+    print(f"🎯 Escenas seleccionadas: {len(escenas)} de {len(todas_escenas)}")
     if sin_voz or volumen_voz <= 0:
         print("🗣️  Voz en off: DESACTIVADA (0%)")
     else:

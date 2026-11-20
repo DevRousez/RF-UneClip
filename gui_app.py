@@ -108,8 +108,9 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
         if path.startswith("/media/"):
             partes = path[len("/media/"):].split("/")
             if len(partes) >= 3:
-                canal, proyecto = partes[0], partes[1]
-                nombre_archivo = "/".join(partes[2:])
+                canal = urllib.parse.unquote(partes[0])
+                proyecto = urllib.parse.unquote(partes[1])
+                nombre_archivo = urllib.parse.unquote("/".join(partes[2:]))
                 carpeta_canal = video_editor.obtener_ruta_canal(canal)
                 posibles_rutas = [
                     carpeta_canal / proyecto / nombre_archivo,
@@ -229,9 +230,23 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
         # 5. API: Modo Compilado
         if path == "/api/compilar":
             cuerpo = json.loads(self.rfile.read(longitud).decode("utf-8"))
-            videos = [Path(v) for v in cuerpo.get("videos", [])]
+            videos_raw = cuerpo.get("videos", [])
             nombre_salida = cuerpo.get("salida", "compilacion_final.mp4")
             formato = cuerpo.get("formato", "16:9")
+            
+            videos = []
+            dir_canales = video_editor.obtener_directorio_canales_defecto()
+            for v_str in videos_raw:
+                v_clean = v_str.strip()
+                if not v_clean:
+                    continue
+                p = Path(v_clean)
+                if p.is_file():
+                    videos.append(p.resolve())
+                elif (dir_canales / p).is_file():
+                    videos.append((dir_canales / p).resolve())
+                else:
+                    videos.append(p)
             
             hilo = threading.Thread(
                 target=self.ejecutar_compilacion_en_segundo_plano,
@@ -292,19 +307,49 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
             self.send_error(500, f"Error al descargar archivo: {e}")
 
     def servir_archivo_local(self, ruta_archivo: Path):
+        """Sirve archivos multimedia con soporte de streaming (HTTP 206 Partial Content) para navegadores."""
         try:
-            with open(ruta_archivo, "rb") as f:
-                contenido = f.read()
-            self.send_response(200)
-            if ruta_archivo.suffix.lower() == ".mp4":
-                self.send_header("Content-Type", "video/mp4")
-            elif ruta_archivo.suffix.lower() == ".mp3":
-                self.send_header("Content-Type", "audio/mpeg")
+            tamano_total = ruta_archivo.stat().st_size
+            ext = ruta_archivo.suffix.lower()
+            if ext == ".mp4":
+                content_type = "video/mp4"
+            elif ext == ".mp3":
+                content_type = "audio/mpeg"
+            elif ext in [".png", ".jpg", ".jpeg"]:
+                content_type = f"image/{ext.replace('.', '')}"
             else:
-                self.send_header("Content-Type", "application/octet-stream")
-            self.send_header("Content-Length", str(len(contenido)))
-            self.end_headers()
-            self.wfile.write(contenido)
+                content_type = "application/octet-stream"
+
+            range_header = self.headers.get("Range")
+            if range_header and range_header.startswith("bytes="):
+                # Soporte de streaming para videos (permite pausar, adelantar y reproducir sin trabas)
+                partes_range = range_header[len("bytes="):].split("-")
+                inicio = int(partes_range[0]) if partes_range[0] else 0
+                fin = int(partes_range[1]) if len(partes_range) > 1 and partes_range[1] else tamano_total - 1
+                if fin >= tamano_total:
+                    fin = tamano_total - 1
+                longitud_chunk = fin - inicio + 1
+
+                self.send_response(206)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Range", f"bytes {inicio}-{fin}/{tamano_total}")
+                self.send_header("Content-Length", str(longitud_chunk))
+                self.send_header("Accept-Ranges", "bytes")
+                self.end_headers()
+
+                with open(ruta_archivo, "rb") as f:
+                    f.seek(inicio)
+                    self.wfile.write(f.read(longitud_chunk))
+            else:
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Length", str(tamano_total))
+                self.send_header("Accept-Ranges", "bytes")
+                self.end_headers()
+                with open(ruta_archivo, "rb") as f:
+                    shutil.copyfileobj(f, self.wfile)
+        except (ConnectionResetError, BrokenPipeError):
+            pass
         except Exception as e:
             self.send_error(500, f"Error al servir archivo: {e}")
 

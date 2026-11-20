@@ -232,11 +232,46 @@ select option {
   background: #1f2438;
 }
 
+.scene-card.disabled {
+  opacity: 0.42;
+  border: 1px dashed #3a415a;
+  background: #12141c;
+}
+
+.scene-card.disabled:hover {
+  opacity: 0.7;
+}
+
 .scene-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+}
+
+.btn-eliminar-escena {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.btn-eliminar-escena:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.15);
+  transform: scale(1.1);
+}
+
+.check-escena-activa {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--success);
 }
 
 .scene-badge {
