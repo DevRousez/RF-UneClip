@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "🎬 Iniciar Editor (GUI Web)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/gui_app.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "⚙️ Motor de Video (CLI)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/video_editor.py",
+      "console": "integratedTerminal"
+    }
+  ]
+}
