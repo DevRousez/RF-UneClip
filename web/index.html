@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RF-UneClip ( AKDYA )</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=3.5" />
   </head>
   <body>
     <!-- Encabezado Superior -->
@@ -223,8 +223,20 @@
               </div>
               <!-- Capa de texto sobreimpreso en vivo -->
               <div id="screenOverlayText" class="screen-overlay-text">A</div>
+              <!-- Botón flotante Play central -->
+              <div id="overlayPlayButton" class="overlay-play-btn" title="Clic para reproducir">▶</div>
             </div>
           </div>
+        </div>
+
+        <!-- Barra de Controles del Reproductor en Vivo -->
+        <div class="preview-player-bar">
+          <button id="btnPlayPauseVideo" class="btn btn-primary" style="padding: 5px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+            <span id="iconoPlayPause">▶</span> <span id="textoPlayPause">Reproducir</span>
+          </button>
+          <button id="btnReiniciarVideo" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" title="Volver al inicio de la escena">⏮</button>
+          <span id="playerTimeDisplay" class="player-time-display">00:00 / 00:00</span>
+          <button id="btnMuteVideo" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" title="Activar / Desactivar sonido">🔊</button>
         </div>
 
         <!-- Panel Inferior: Línea de Tiempo (Timeline) -->
@@ -537,6 +549,6 @@
     <!-- Contenedor de notificaciones flotantes (Toast) -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=3.5"></script>
   </body>
 </html>

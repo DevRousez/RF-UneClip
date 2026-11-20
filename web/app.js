@@ -30,6 +30,13 @@ const checkSinTexto = document.getElementById("checkSinTexto");
 const videoPreview = document.getElementById("videoPreview");
 const screenPlaceholder = document.getElementById("screenPlaceholder");
 const screenOverlayText = document.getElementById("screenOverlayText");
+const btnPlayPauseVideo = document.getElementById("btnPlayPauseVideo");
+const iconoPlayPause = document.getElementById("iconoPlayPause");
+const textoPlayPause = document.getElementById("textoPlayPause");
+const btnReiniciarVideo = document.getElementById("btnReiniciarVideo");
+const btnMuteVideo = document.getElementById("btnMuteVideo");
+const playerTimeDisplay = document.getElementById("playerTimeDisplay");
+const overlayPlayButton = document.getElementById("overlayPlayButton");
 const inputArchivoEscena = document.getElementById("inputArchivoEscena");
 const inputArchivoAudio = document.getElementById("inputArchivoAudio");
 const pistaVideo = document.getElementById("pistaVideo");
@@ -207,6 +214,7 @@ function renderizarProyecto() {
         <div style="display: flex; align-items: center; gap: 8px;">
           <input type="checkbox" class="check-escena-activa" data-index="${idx}" ${activa ? "checked" : ""} title="Marcar para incluir en la edición / Desmarcar para excluir">
           <span class="scene-badge">Escena ${idx + 1}</span>
+          <button type="button" class="btn-play-escena" data-index="${idx}" title="Reproducir esta escena en el visor">▶ Ver</button>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <div class="scene-file">
@@ -248,13 +256,23 @@ function renderizarProyecto() {
         e.target.tagName !== "INPUT" &&
         e.target.tagName !== "TEXTAREA" &&
         !e.target.classList.contains("dropzone") &&
-        !e.target.classList.contains("btn-eliminar-escena")
+        !e.target.classList.contains("btn-eliminar-escena") &&
+        !e.target.classList.contains("btn-play-escena")
       ) {
-        seleccionarEscena(idx);
+        seleccionarEscena(idx, false);
       }
     });
 
     contenedorEscenas.appendChild(card);
+  });
+
+  // Evento para botones directos de reproducir escena
+  document.querySelectorAll(".btn-play-escena").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const i = parseInt(btn.dataset.index);
+      seleccionarEscena(i, true);
+    });
   });
 
   // 2. Eventos para checkboxes de activación y botones de eliminación
@@ -361,7 +379,62 @@ if (selectFormato) {
   });
 }
 
-function seleccionarEscena(idx) {
+function formatearTiempo(segundos) {
+  if (isNaN(segundos) || segundos < 0) return "00:00";
+  const m = Math.floor(segundos / 60);
+  const s = Math.floor(segundos % 60);
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function actualizarBotonPlayPause(reproduciendo) {
+  if (iconoPlayPause) iconoPlayPause.textContent = reproduciendo ? "⏸" : "▶";
+  if (textoPlayPause) textoPlayPause.textContent = reproduciendo ? "Pausar" : "Reproducir";
+  if (overlayPlayButton) {
+    const tieneVideo = videoPreview && videoPreview.src && videoPreview.style.display !== "none";
+    overlayPlayButton.style.display = (tieneVideo && !reproduciendo) ? "flex" : "none";
+  }
+}
+
+async function alternarReproduccion() {
+  if (!datosProyecto || !datosProyecto.guion) return;
+  const escenas = datosProyecto.guion.escenas || [];
+  const escena = escenas[escenaSeleccionadaIdx];
+  if (!escena) return;
+
+  const existeVideo = datosProyecto.archivos_existentes && datosProyecto.archivos_existentes[escena.video];
+  if (!existeVideo) {
+    mostrarNotificacion(`No hay video MP4 adjunto para la escena ${escenaSeleccionadaIdx + 1} (${escena.video}).`, "info");
+    return;
+  }
+
+  if (!videoPreview.src || videoPreview.style.display === "none") {
+    seleccionarEscena(escenaSeleccionadaIdx, true);
+    return;
+  }
+
+  if (videoPreview.paused) {
+    try {
+      await videoPreview.play();
+      actualizarBotonPlayPause(true);
+    } catch (e) {
+      console.warn("Reproducción bloqueada con audio, silenciando para iniciar:", e);
+      videoPreview.muted = true;
+      if (btnMuteVideo) btnMuteVideo.textContent = "🔇";
+      try {
+        await videoPreview.play();
+        actualizarBotonPlayPause(true);
+      } catch (err2) {
+        console.error("No se pudo reproducir el video:", err2);
+        actualizarBotonPlayPause(false);
+      }
+    }
+  } else {
+    videoPreview.pause();
+    actualizarBotonPlayPause(false);
+  }
+}
+
+function seleccionarEscena(idx, forzarPlay = false) {
   escenaSeleccionadaIdx = idx;
   document.querySelectorAll(".scene-card").forEach((c, i) => {
     c.classList.toggle("active", i === idx);
@@ -384,15 +457,37 @@ function seleccionarEscena(idx) {
     }
     videoPreview.style.display = "block";
     screenPlaceholder.style.display = "none";
-    videoPreview.play().catch(err => {
-      console.log("Reproducción automática no permitida o pausada:", err);
-    });
+
+    if (forzarPlay) {
+      videoPreview.muted = false;
+      if (btnMuteVideo) btnMuteVideo.textContent = "🔊";
+      videoPreview.play().then(() => {
+        actualizarBotonPlayPause(true);
+      }).catch(err => {
+        console.warn("Reproducción con sonido no permitida directamente por el navegador, silenciando:", err);
+        videoPreview.muted = true;
+        if (btnMuteVideo) btnMuteVideo.textContent = "🔇";
+        videoPreview.play().then(() => {
+          actualizarBotonPlayPause(true);
+        }).catch(err2 => {
+          console.error("Error reproduciendo:", err2);
+          actualizarBotonPlayPause(false);
+        });
+      });
+    } else {
+      actualizarBotonPlayPause(!videoPreview.paused);
+    }
   } else {
     videoPreview.pause();
     videoPreview.removeAttribute("src");
     videoPreview.removeAttribute("data-src");
     videoPreview.style.display = "none";
     screenPlaceholder.style.display = "flex";
+    actualizarBotonPlayPause(false);
+    if (playerTimeDisplay) playerTimeDisplay.textContent = "00:00 / 00:00";
+    if (forzarPlay) {
+      mostrarNotificacion(`No hay video MP4 para la escena ${idx + 1} (${escena.video}). Usa "📁 Adjuntar Video MP4" para cargarlo.`, "info");
+    }
   }
 }
 
@@ -619,21 +714,40 @@ async function guardarGuion(silencioso = false) {
 
 btnGuardarGuion.addEventListener("click", () => guardarGuion(false));
 
+async function agregarNuevaEscena() {
+  if (!datosProyecto || !datosProyecto.guion) {
+    mostrarNotificacion("Espera a que cargue el proyecto o crea uno.", "info");
+    return;
+  }
+  if (!datosProyecto.guion.escenas) datosProyecto.guion.escenas = [];
+  const escenas = datosProyecto.guion.escenas;
+  const nextNum = escenas.length + 1;
+  const nuevaEscena = {
+    video: `escena-${nextNum}.mp4`,
+    texto_pantalla: `ESCENA ${nextNum}`,
+    texto_voz: `Texto narrado para la escena ${nextNum}...`,
+    activa: true
+  };
+  escenas.push(nuevaEscena);
+
+  // Guardar en guion.json en disco automáticamente
+  await guardarGuion(true);
+
+  renderizarProyecto();
+  seleccionarEscena(escenas.length - 1, false);
+  mostrarNotificacion(`✓ Escena ${nextNum} añadida y guardada al guion`);
+
+  if (contenedorEscenas) {
+    setTimeout(() => {
+      contenedorEscenas.scrollTop = contenedorEscenas.scrollHeight;
+    }, 100);
+  }
+}
+
 if (btnAgregarEscena) {
-  btnAgregarEscena.addEventListener("click", () => {
-    if (!datosProyecto || !datosProyecto.guion) return;
-    if (!datosProyecto.guion.escenas) datosProyecto.guion.escenas = [];
-    const escenas = datosProyecto.guion.escenas;
-    const nextNum = escenas.length + 1;
-    escenas.push({
-      video: `escena-${nextNum}.mp4`,
-      texto_pantalla: `ESCENA ${nextNum}`,
-      texto_voz: `Texto narrado para la escena ${nextNum}...`,
-      activa: true
-    });
-    renderizarProyecto();
-    seleccionarEscena(escenas.length - 1);
-    mostrarNotificacion(`✓ Escena ${nextNum} añadida al guion`);
+  btnAgregarEscena.addEventListener("click", (e) => {
+    e.preventDefault();
+    agregarNuevaEscena();
   });
 }
 
@@ -990,6 +1104,68 @@ function configurarEventos() {
       renderAcciones.style.display = "flex";
     }
   });
+
+  // Delegación global para añadir escena
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("#btnAgregarEscena");
+    if (btn) {
+      e.preventDefault();
+      agregarNuevaEscena();
+    }
+  });
+
+  // Eventos de barra de reproducción en vivo
+  if (videoPreview) {
+    videoPreview.addEventListener("play", () => actualizarBotonPlayPause(true));
+    videoPreview.addEventListener("pause", () => actualizarBotonPlayPause(false));
+    videoPreview.addEventListener("timeupdate", () => {
+      if (playerTimeDisplay && videoPreview.duration) {
+        playerTimeDisplay.textContent = `${formatearTiempo(videoPreview.currentTime)} / ${formatearTiempo(videoPreview.duration)}`;
+      }
+    });
+    videoPreview.addEventListener("loadedmetadata", () => {
+      if (playerTimeDisplay && videoPreview.duration) {
+        playerTimeDisplay.textContent = `00:00 / ${formatearTiempo(videoPreview.duration)}`;
+      }
+      actualizarBotonPlayPause(!videoPreview.paused);
+    });
+    videoPreview.addEventListener("click", () => {
+      alternarReproduccion();
+    });
+  }
+
+  if (btnPlayPauseVideo) {
+    btnPlayPauseVideo.addEventListener("click", (e) => {
+      e.preventDefault();
+      alternarReproduccion();
+    });
+  }
+
+  if (overlayPlayButton) {
+    overlayPlayButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      alternarReproduccion();
+    });
+  }
+
+  if (btnReiniciarVideo) {
+    btnReiniciarVideo.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (videoPreview && videoPreview.src && videoPreview.style.display !== "none") {
+        videoPreview.currentTime = 0;
+        videoPreview.play().then(() => actualizarBotonPlayPause(true)).catch(() => {});
+      }
+    });
+  }
+
+  if (btnMuteVideo) {
+    btnMuteVideo.addEventListener("click", (e) => {
+      e.preventDefault();
+      videoPreview.muted = !videoPreview.muted;
+      btnMuteVideo.textContent = videoPreview.muted ? "🔇" : "🔊";
+      btnMuteVideo.title = videoPreview.muted ? "Activar sonido" : "Silenciar sonido";
+    });
+  }
 }
 
 // Iniciar aplicación

@@ -483,6 +483,73 @@ textarea.form-control {
   background: #2e3447;
   border-radius: 10px;
   z-index: 5;
+  pointer-events: none !important;
+}
+
+/* Barra de Controles de Reproducción del Preview */
+.preview-player-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 5;
+}
+
+.player-time-display {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+  min-width: 100px;
+  text-align: center;
+  user-select: none;
+}
+
+.overlay-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  background: rgba(99, 102, 241, 0.88);
+  color: white;
+  border-radius: 50%;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  font-size: 26px;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.7);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.overlay-play-btn:hover {
+  transform: translate(-50%, -50%) scale(1.12);
+  background: #4f46e5;
+}
+
+.btn-play-escena {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.2s;
+}
+
+.btn-play-escena:hover {
+  background: #2563eb;
 }
 
 /* Barra de configuración rápida superior en Preview */

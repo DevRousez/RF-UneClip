@@ -17,6 +17,7 @@ import shutil
 import urllib.parse
 import threading
 import webbrowser
+import re
 import subprocess
 from pathlib import Path
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -24,6 +25,9 @@ from typing import Dict, Any, List
 
 # Importar funciones del motor central de video
 import video_editor
+
+# Detección automática inmediata de FFmpeg portable
+video_editor.auto_detectar_ffmpeg()
 
 PUERTO = 8765
 RUTA_WEB = Path(__file__).parent / "web"
@@ -44,6 +48,13 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(RUTA_WEB), **kwargs)
+
+    def end_headers(self):
+        # Desactivar caché agresivo del navegador para que las ediciones web se vean siempre
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
 
     def log_message(self, format, *args):
         # Desactivar logs ruidosos en la consola estándar
@@ -123,6 +134,17 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
                     if r.is_file():
                         self.servir_archivo_local(r)
                         return
+
+                # Si no se encontró por nombre exacto, buscar por número de escena (ej. 1.mp4 o esena 1.mp4)
+                m = re.search(r"(\d+)", nombre_archivo)
+                if m:
+                    num = m.group(1)
+                    for alt in [f"{num}.mp4", f"esena {num}.mp4", f"escena {num}.mp4", f"escena-{num}.mp4", f"escena_{num}.mp4"]:
+                        for sub in ["escenas", ""]:
+                            cand = (carpeta_canal / proyecto / sub / alt) if sub else (carpeta_canal / proyecto / alt)
+                            if cand.is_file():
+                                self.servir_archivo_local(cand)
+                                return
             self.send_error(404, "Archivo no encontrado")
             return
 
@@ -410,17 +432,33 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
                 if r.is_file() and r.stat().st_size > 0:
                     archivos_existentes[nombre_v] = True
                     encontrado = True
-                    # Intentar obtener duración con ffprobe si está disponible
-                    if shutil.which("ffprobe"):
-                        try:
-                            info = video_editor.obtener_info_media(r)
-                            duraciones_video[nombre_v] = info["duracion"]
-                        except Exception:
-                            duraciones_video[nombre_v] = 10.0
-                    else:
-                        duraciones_video[nombre_v] = 10.0
                     break
+
             if not encontrado:
+                m_num = re.search(r"(\d+)", nombre_v)
+                if m_num:
+                    num = m_num.group(1)
+                    for alt in [f"{num}.mp4", f"esena {num}.mp4", f"escena {num}.mp4", f"escena-{num}.mp4", f"escena_{num}.mp4"]:
+                        for base in [carpeta / "escenas", carpeta]:
+                            cand = base / alt
+                            if cand.is_file() and cand.stat().st_size > 0:
+                                r = cand
+                                encontrado = True
+                                archivos_existentes[nombre_v] = True
+                                break
+                        if encontrado:
+                            break
+
+            if encontrado and r:
+                if shutil.which("ffprobe"):
+                    try:
+                        info = video_editor.obtener_info_media(r)
+                        duraciones_video[nombre_v] = info["duracion"]
+                    except Exception:
+                        duraciones_video[nombre_v] = 10.0
+                else:
+                    duraciones_video[nombre_v] = 10.0
+            else:
                 archivos_existentes[nombre_v] = False
                 duraciones_video[nombre_v] = 10.0
                 
