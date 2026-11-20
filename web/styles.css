@@ -325,10 +325,10 @@ textarea.form-control {
   position: relative;
 }
 
-/* Smartphone Mockup 9:16 */
+/* Mockup Adaptable: 9:16 vertical, 16:9 horizontal, 1:1 cuadrado */
 .phone-mockup {
   width: 290px;
-  height: 515px; /* Ratio exacto 9:16 */
+  height: 515px; /* Ratio exacto 9:16 por defecto */
   background: #000;
   border-radius: 36px;
   border: 8px solid #2e3447;
@@ -339,6 +339,31 @@ textarea.form-control {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), height 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s ease;
+}
+
+/* Formato Horizontal 16:9 (YouTube Estándar / Compilados Largos) */
+.phone-mockup.format-16-9 {
+  width: 540px;
+  height: 304px; /* 16:9 exacto */
+  border-radius: 16px;
+  border: 8px solid #242938;
+}
+
+.phone-mockup.format-16-9 .phone-notch {
+  display: none;
+}
+
+/* Formato Cuadrado 1:1 (Instagram / Feeds) */
+.phone-mockup.format-1-1 {
+  width: 380px;
+  height: 380px; /* 1:1 exacto */
+  border-radius: 20px;
+  border: 8px solid #242938;
+}
+
+.phone-mockup.format-1-1 .phone-notch {
+  display: none;
 }
 
 .phone-screen {

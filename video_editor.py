@@ -70,6 +70,31 @@ ALTO_DEFECTO = 1280
 VOLUMEN_AMBIENTE = 0.25
 BITRATE_AUDIO = "128k"
 
+FORMATOS_VIDEO = {
+    "9:16": {"ancho": 720, "alto": 1280, "nombre": "9:16 Vertical (Shorts & TikTok)"},
+    "16:9": {"ancho": 1280, "alto": 720, "nombre": "16:9 Horizontal (YouTube Normal 720p)"},
+    "16:9-fhd": {"ancho": 1920, "alto": 1080, "nombre": "16:9 Full HD (YouTube Normal 1080p)"},
+    "1:1": {"ancho": 1080, "alto": 1080, "nombre": "1:1 Cuadrado (Instagram)"}
+}
+
+def obtener_dimensiones_formato(formato: Optional[str] = "9:16") -> Tuple[int, int]:
+    """
+    Retorna la resolución (ancho, alto) según el formato deseado:
+    - '9:16' (Shorts / TikTok): 720x1280
+    - '16:9' (YouTube normal / horizontal): 1280x720
+    - '16:9-fhd' (YouTube Full HD): 1920x1080
+    - '1:1' (Cuadrado): 1080x1080
+    """
+    f = (formato or "9:16").lower().strip()
+    if "1080" in f or "fhd" in f:
+        return (1920, 1080)
+    elif "16:9" in f or "horizontal" in f or "youtube" in f:
+        return (1280, 720)
+    elif "1:1" in f or "cuadrado" in f:
+        return (1080, 1080)
+    else:
+        return (ANCHO_DEFECTO, ALTO_DEFECTO)
+
 RUTA_CONFIG = Path(__file__).parent / "config.json"
 
 def cargar_config() -> Dict[str, Any]:
@@ -614,7 +639,9 @@ def procesar_escena(
     ruta_fuente: str,
     sin_texto: bool = False,
     volumen_video: float = 0.25,
-    volumen_voz: float = 1.0
+    volumen_voz: float = 1.0,
+    ancho: int = ANCHO_DEFECTO,
+    alto: int = ALTO_DEFECTO
 ):
     """
     Procesa una única escena:
@@ -624,7 +651,7 @@ def procesar_escena(
        - Si volumen_video == 0: silencia el audio original del video por completo.
        - Si volumen_voz == 0: silencia la narración.
        - Si ambos > 0: mezcla con 'normalize=0' para que la narración no pierda volumen.
-    4. Garantiza resolución exacta 720x1280 a 24 fps.
+    4. Garantiza resolución exacta (ancho x alto, ej: 720x1280 o 1280x720) a 24 fps.
     """
     ruta_v = detalle["ruta_video"]
     ruta_a = detalle["ruta_audio"]
@@ -635,22 +662,23 @@ def procesar_escena(
     # Construcción de la cadena de filtros de video
     video_filters = []
     
-    # 1. Ajuste de escala / resolución base y fps
-    video_filters.append(f"scale={ANCHO_DEFECTO}:{ALTO_DEFECTO}:force_original_aspect_ratio=decrease,pad={ANCHO_DEFECTO}:{ALTO_DEFECTO}:(ow-iw)/2:(oh-ih)/2,fps={FPS_DEFECTO}")
+    # 1. Ajuste de escala / resolución base y fps (soporta 9:16 vertical, 16:9 horizontal, 1:1)
+    video_filters.append(f"scale={ancho}:{alto}:force_original_aspect_ratio=decrease,pad={ancho}:{alto}:(ow-iw)/2:(oh-ih)/2,fps={FPS_DEFECTO}")
     
     # 2. Extensión de video si el audio es más largo
     if ext > 0.0:
         video_filters.append(f"tpad=stop_mode=clone:stop_duration={ext:.3f}")
         
-    # 3. Filtro drawtext para texto en pantalla llamativo
+    # 3. Filtro drawtext para texto en pantalla llamativo (proporcional al alto)
     if not sin_texto and texto_pantalla and texto_pantalla.strip():
         txt_escapado = escapar_texto_drawtext(texto_pantalla.strip())
         fuente_escapada = escapar_ruta_fuente(ruta_fuente)
+        ratio_fontsize = "h/10" if ancho > alto else ("h/12" if ancho == alto else "h/14")
         filtro_texto = (
             f"drawtext=fontfile='{fuente_escapada}':"
             f"text='{txt_escapado}':"
             f"fontcolor=#FFE500:"
-            f"fontsize=h/14:"
+            f"fontsize={ratio_fontsize}:"
             f"bordercolor=black:"
             f"borderw=6:"
             f"shadowcolor=black@0.6:"
@@ -770,11 +798,13 @@ def ensamblar_video_final(
 
 def compilar_videos_terminados(
     lista_videos: List[Path],
-    ruta_salida: Path
+    ruta_salida: Path,
+    formato: str = "16:9"
 ):
     """
     Une N videos terminados en un único video largo, normalizando resolución
-    y formato para que no haya desincronización.
+    y relación de aspecto (por defecto 16:9 horizontal 1280x720 para YouTube)
+    para que no haya desincronización o bandas inesperadas.
     """
     if not lista_videos:
         raise ValueError("La lista de videos a compilar está vacía.")
@@ -783,7 +813,8 @@ def compilar_videos_terminados(
         if not v.is_file():
             raise FileNotFoundError(f"No existe el video a compilar: {v}")
             
-    print(f"\n📦 Compilando {len(lista_videos)} videos en '{ruta_salida.name}'...")
+    ancho, alto = obtener_dimensiones_formato(formato)
+    print(f"\n📦 Compilando {len(lista_videos)} videos en '{ruta_salida.name}' con formato {formato} ({ancho}x{alto})...")
     ruta_salida.parent.mkdir(parents=True, exist_ok=True)
     
     inputs = []
@@ -795,7 +826,7 @@ def compilar_videos_terminados(
     n = len(lista_videos)
     filter_complex = (
         f"{filter_concat_in}concat=n={n}:v=1:a=1[v][a];"
-        f"[v]scale={ANCHO_DEFECTO}:{ALTO_DEFECTO}:force_original_aspect_ratio=decrease,pad={ANCHO_DEFECTO}:{ALTO_DEFECTO}:(ow-iw)/2:(oh-ih)/2,fps={FPS_DEFECTO}[vout]"
+        f"[v]scale={ancho}:{alto}:force_original_aspect_ratio=decrease,pad={ancho}:{alto}:(ow-iw)/2:(oh-ih)/2,fps={FPS_DEFECTO}[vout]"
     )
     
     cmd = [
@@ -958,7 +989,8 @@ def ejecutar_edicion(
     sin_voz: bool = False,
     volumen_video: float = 0.25,
     volumen_voz: float = 1.0,
-    ruta_fuente: Optional[str] = None
+    ruta_fuente: Optional[str] = None,
+    formato: str = "9:16"
 ):
     """Ejecuta el pipeline completo de automatización de video."""
     carpeta = Path(carpeta).resolve()
@@ -972,11 +1004,14 @@ def ejecutar_edicion(
     datos_guion = leer_guion(ruta_guion, carpeta_trabajo=carpeta)
     titulo = datos_guion.get("titulo", "Video Infantil")
     voz = voz_override or datos_guion.get("voz", VOZ_DEFECTO)
+    formato_final = formato or datos_guion.get("formato", "9:16")
+    ancho, alto = obtener_dimensiones_formato(formato_final)
     escenas = datos_guion["escenas"]
     
     print("=" * 70)
     print(f"🎬 INICIANDO EDICIÓN AUTOMATIZADA: {titulo}")
     print(f"📂 Carpeta de trabajo: {carpeta}")
+    print(f"📐 Formato de video: {formato_final} ({ancho}x{alto})")
     if sin_voz or volumen_voz <= 0:
         print("🗣️  Voz en off: DESACTIVADA (0%)")
     else:
@@ -1015,7 +1050,9 @@ def ejecutar_edicion(
                 ruta_fuente=ruta_fuente,
                 sin_texto=sin_texto,
                 volumen_video=volumen_video,
-                volumen_voz=0.0 if sin_voz else volumen_voz
+                volumen_voz=0.0 if sin_voz else volumen_voz,
+                ancho=ancho,
+                alto=alto
             )
             print(" [OK]")
             rutas_procesadas.append(salida_temp)
@@ -1095,6 +1132,7 @@ Ejemplos de uso:
     parser.add_argument("--volumen-video", type=float, default=0.25, help="Volumen del audio original del video (0.0 = silenciar por completo, 1.0 = normal)")
     parser.add_argument("--volumen-voz", type=float, default=1.0, help="Volumen de la narración de voz (1.0 = normal, 1.5 = alta)")
     parser.add_argument("--fuente", type=str, default=None, help="Ruta a un archivo de fuente .ttf personalizado")
+    parser.add_argument("--formato", type=str, default="9:16", choices=["9:16", "16:9", "16:9-fhd", "1:1"], help="Relación de aspecto: '9:16' (Shorts), '16:9' (YouTube 720p), '16:9-fhd' (YouTube 1080p), '1:1' (Cuadrado)")
     
     # Gestión de Canales / Espacios de trabajo
     parser.add_argument("--iniciar-proyecto", action="store_true", help="Crea la estructura de carpetas para un nuevo proyecto de canal")
@@ -1143,7 +1181,8 @@ Ejemplos de uso:
     if args.compilar:
         salida_comp = Path(args.salida) if args.salida else Path("compilacion_final.mp4")
         videos = [Path(v) for v in args.compilar]
-        compilar_videos_terminados(lista_videos=videos, ruta_salida=salida_comp)
+        formato_comp = args.formato if args.formato != "9:16" else "16:9"
+        compilar_videos_terminados(lista_videos=videos, ruta_salida=salida_comp, formato=formato_comp)
         sys.exit(0)
         
     # 4. Acción: Edición normal de video
@@ -1162,7 +1201,8 @@ Ejemplos de uso:
         sin_voz=args.sin_voz,
         volumen_video=args.volumen_video,
         volumen_voz=args.volumen_voz,
-        ruta_fuente=args.fuente
+        ruta_fuente=args.fuente,
+        formato=args.formato
     )
 
 

@@ -1,12 +1,13 @@
-# 🎬 Video Studio Kids - Automatizador de Edición (Shorts & TikTok)
+# 🎬 Video Studio Kids - Automatizador de Edición (Shorts, TikTok y YouTube Largo)
 
-Programa en Python + FFmpeg con **Interfaz Gráfica Visual (GUI)** y soporte por consola para automatizar la edición de videos animados 3D infantiles en formato vertical **9:16 (720x1280 a 24 fps)** con:
-- 📊 **Línea de tiempo multipista interactiva en tiempo real** (Pista de Video 3D, Pista de Narración TTS y Pista de Texto en pantalla).
-- 📱 **Simulador Smartphone 9:16** con previsualización en vivo del video y del texto llamativo (con borde y sombra).
-- 🎙️ **Narración por voz con `edge-tts`** (gratuito, sin API key) y atenuación automática del audio ambiente a 0.25.
-- 📁 **Espacios de trabajo independientes por canal** para no mezclar el contenido de tus canales.
+Programa en Python + FFmpeg con **Interfaz Gráfica Visual (GUI)** y soporte por consola para automatizar la edición de videos animados infantiles tanto en formato vertical **9:16 (Shorts & TikTok)** como en formato horizontal **16:9 (YouTube Normal / Compilados Largos)**:
+- 📐 **Múltiples Formatos y Relaciones de Aspecto:** Selector dinámico entre **9:16 Vertical** (720x1280), **16:9 Horizontal** (1280x720 / 1920x1080 Full HD) y **1:1 Cuadrado** (1080x1080).
+- 📊 **Línea de tiempo multipista interactiva en tiempo real** (Pista de Video 3D, Pista de Narración y Pista de Texto en pantalla).
+- 📱 **Simulador Adaptable (Smartphone 9:16 / Pantalla Panorámica 16:9)** con previsualización en vivo del video y del texto llamativo (con borde y sombra).
+- 🎙️ **Narración por voz con `edge-tts` o Audios Propios** con control independiente de volumen para el video original y la voz en off.
+- 📁 **Espacios de trabajo independientes por canal** con auto-incremento de numeración (`v18`, `v19`, etc.).
 - 🚀 **Botón "Comenzar Edición" con barra de progreso en vivo y logs.**
-- 📦 **Modo Compilado** para unir videos terminados en un video largo.
+- 📦 **Modo Compilado** para unir videos terminados en compilaciones largas horizontales (16:9) o verticales.
 
 ---
 

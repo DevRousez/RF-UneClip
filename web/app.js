@@ -17,6 +17,10 @@ const btnNuevoProyecto = document.getElementById("btnNuevoProyecto");
 const btnGuardarGuion = document.getElementById("btnGuardarGuion");
 const btnComenzarEdicion = document.getElementById("btnComenzarEdicion");
 const contenedorEscenas = document.getElementById("contenedorEscenas");
+const selectFormato = document.getElementById("selectFormato");
+const previewMockup = document.getElementById("previewMockup");
+const formatoEspecificaciones = document.getElementById("formatoEspecificaciones");
+const compiladorFormato = document.getElementById("compiladorFormato");
 const selectVoz = document.getElementById("selectVoz");
 const selectVolumenVideo = document.getElementById("selectVolumenVideo");
 const selectVolumenVoz = document.getElementById("selectVolumenVoz");
@@ -178,6 +182,12 @@ function renderizarProyecto() {
     selectVoz.value = guion.voz;
   }
 
+  // Establecer formato (9:16, 16:9, etc.)
+  if (guion.formato && selectFormato) {
+    selectFormato.value = guion.formato;
+  }
+  actualizarVistaFormato();
+
   // 1. Renderizar lista de escenas
   contenedorEscenas.innerHTML = "";
   escenas.forEach((escena, idx) => {
@@ -268,8 +278,43 @@ function renderizarProyecto() {
     });
   });
 
-  actualizarLineaTiempo();
+  actualizarVistaFormato();
   seleccionarEscena(escenaSeleccionadaIdx);
+}
+
+function actualizarVistaFormato() {
+  if (!selectFormato) return;
+  const fmt = selectFormato.value;
+  if (previewMockup) {
+    previewMockup.classList.remove("format-16-9", "format-1-1");
+    if (fmt === "16:9" || fmt === "16:9-fhd") {
+      previewMockup.classList.add("format-16-9");
+    } else if (fmt === "1:1") {
+      previewMockup.classList.add("format-1-1");
+    }
+  }
+
+  if (formatoEspecificaciones) {
+    if (fmt === "16:9") {
+      formatoEspecificaciones.textContent = "Horizontal 1280x720 (16:9) @ 24fps • YouTube Normal • H.264 + AAC";
+    } else if (fmt === "16:9-fhd") {
+      formatoEspecificaciones.textContent = "Horizontal 1920x1080 (16:9 FHD) @ 24fps • YouTube Normal • H.264 + AAC";
+    } else if (fmt === "1:1") {
+      formatoEspecificaciones.textContent = "Cuadrado 1080x1080 (1:1) @ 24fps • Instagram Feed • H.264 + AAC";
+    } else {
+      formatoEspecificaciones.textContent = "Vertical 720x1280 (9:16) @ 24fps • Shorts & TikTok • H.264 + AAC";
+    }
+  }
+}
+
+if (selectFormato) {
+  selectFormato.addEventListener("change", () => {
+    if (datosProyecto && datosProyecto.guion) {
+      datosProyecto.guion.formato = selectFormato.value;
+    }
+    actualizarVistaFormato();
+    actualizarLineaTiempo();
+  });
 }
 
 function seleccionarEscena(idx) {
@@ -352,7 +397,8 @@ function actualizarLineaTiempo() {
     const clipT = document.createElement("div");
     clipT.className = "timeline-clip clip-text";
     const textoMostrar = checkSinTexto.checked ? "(desactivado)" : (escena.texto_pantalla || "(sin texto)");
-    clipT.innerHTML = `<span>"${textoMostrar}"</span><span class="clip-badge">9:16</span>`;
+    const badgeFormato = selectFormato ? selectFormato.value.replace("-fhd", "") : "9:16";
+    clipT.innerHTML = `<span>"${textoMostrar}"</span><span class="clip-badge">${badgeFormato}</span>`;
     clipT.addEventListener("click", () => seleccionarEscena(idx));
     pistaTexto.appendChild(clipT);
   });
@@ -482,6 +528,9 @@ async function guardarGuion(silencioso = false) {
   if (!datosProyecto || !datosProyecto.guion) return;
 
   datosProyecto.guion.voz = selectVoz.value;
+  if (selectFormato) {
+    datosProyecto.guion.formato = selectFormato.value;
+  }
 
   try {
     const res = await fetch("/api/proyecto/guardar", {
@@ -554,6 +603,7 @@ btnComenzarEdicion.addEventListener("click", async () => {
   const volVid = parseFloat(selectVolumenVideo.value);
   const volVoz = parseFloat(selectVolumenVoz.value);
   const sinVoz = (checkSinVoz && checkSinVoz.checked) || (volVoz === 0);
+  const formatoSeleccionado = selectFormato ? selectFormato.value : "9:16";
 
   try {
     const res = await fetch("/api/comenzar_edicion", {
@@ -566,7 +616,8 @@ btnComenzarEdicion.addEventListener("click", async () => {
         sin_texto: checkSinTexto.checked,
         sin_voz: sinVoz,
         volumen_video: volVid,
-        volumen_voz: volVoz
+        volumen_voz: volVoz,
+        formato: formatoSeleccionado
       })
     });
     const data = await res.json();
@@ -814,11 +865,13 @@ function configurarEventos() {
     renderLogOutput.textContent = `Uniendo ${lineas.length} videos en '${salida}'...\n`;
     renderAcciones.style.display = "none";
 
+    const formatoComp = compiladorFormato ? compiladorFormato.value : "16:9";
+
     try {
       const res = await fetch("/api/compilar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videos: lineas, salida: salida })
+        body: JSON.stringify({ videos: lineas, salida: salida, formato: formatoComp })
       });
       const data = await res.json();
       iniciarSondeoProgreso();

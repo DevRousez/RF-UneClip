@@ -210,6 +210,7 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
             sin_voz = cuerpo.get("sin_voz", False)
             volumen_video = float(cuerpo.get("volumen_video", 0.25))
             volumen_voz = float(cuerpo.get("volumen_voz", 1.0))
+            formato = cuerpo.get("formato", "9:16")
 
             if ESTADO_RENDER["en_progreso"]:
                 self.responder_json({"ok": False, "error": "Ya hay una edición en progreso"})
@@ -218,7 +219,7 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
             # Iniciar edición en segundo plano
             hilo = threading.Thread(
                 target=self.ejecutar_edicion_en_segundo_plano,
-                args=(canal, proyecto, voz, sin_texto, sin_voz, volumen_video, volumen_voz)
+                args=(canal, proyecto, voz, sin_texto, sin_voz, volumen_video, volumen_voz, formato)
             )
             hilo.daemon = True
             hilo.start()
@@ -230,10 +231,11 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
             cuerpo = json.loads(self.rfile.read(longitud).decode("utf-8"))
             videos = [Path(v) for v in cuerpo.get("videos", [])]
             nombre_salida = cuerpo.get("salida", "compilacion_final.mp4")
+            formato = cuerpo.get("formato", "16:9")
             
             hilo = threading.Thread(
                 target=self.ejecutar_compilacion_en_segundo_plano,
-                args=(videos, Path(nombre_salida))
+                args=(videos, Path(nombre_salida), formato)
             )
             hilo.daemon = True
             hilo.start()
@@ -456,7 +458,7 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             self.responder_json({"ok": False, "error": str(e)})
 
-    def ejecutar_edicion_en_segundo_plano(self, canal: str, proyecto: str, voz: str, sin_texto: bool, sin_voz: bool = False, volumen_video: float = 0.25, volumen_voz: float = 1.0):
+    def ejecutar_edicion_en_segundo_plano(self, canal: str, proyecto: str, voz: str, sin_texto: bool, sin_voz: bool = False, volumen_video: float = 0.25, volumen_voz: float = 1.0, formato: str = "9:16"):
         """Ejecuta el renderizado y actualiza el estado de progreso en vivo."""
         global ESTADO_RENDER
         ESTADO_RENDER["en_progreso"] = True
@@ -484,6 +486,7 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
 
         carpeta_canal = video_editor.obtener_ruta_canal(canal)
         carpeta_proyecto = carpeta_canal / proyecto
+        ancho, alto = video_editor.obtener_dimensiones_formato(formato)
 
         try:
             ESTADO_RENDER["progreso"] = 25
@@ -499,6 +502,8 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
             else:
                 ESTADO_RENDER["logs"].append(f"🔊 Audio original de los videos: {int(volumen_video*100)}%.")
 
+            ESTADO_RENDER["logs"].append(f"📐 Formato seleccionado: {formato} ({ancho}x{alto}) a 24 fps.")
+
             # Ejecutar el motor
             video_editor.ejecutar_edicion(
                 carpeta=carpeta_proyecto,
@@ -506,7 +511,8 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
                 sin_texto=sin_texto,
                 sin_voz=sin_voz,
                 volumen_video=volumen_video,
-                volumen_voz=volumen_voz
+                volumen_voz=volumen_voz,
+                formato=formato
             )
 
             nombre_final = f"{carpeta_proyecto.name} - FINAL.mp4"
@@ -520,7 +526,7 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
             ESTADO_RENDER["url_descarga"] = f"/api/descargar_video?canal={urllib.parse.quote(canal)}&proyecto={urllib.parse.quote(proyecto)}"
             ESTADO_RENDER["url_stream"] = f"/media/{canal}/{proyecto}/{nombre_final}"
             ESTADO_RENDER["logs"].append(f"🎉 Video exportado en: {ruta_video_final.resolve()}")
-            ESTADO_RENDER["logs"].append("📐 Formato: 720x1280 (9:16), 24 fps, H.264 + AAC 128k, +faststart.")
+            ESTADO_RENDER["logs"].append(f"📐 Resolución final: {ancho}x{alto} ({formato}), 24 fps, H.264 + AAC 128k, +faststart.")
             ESTADO_RENDER["finalizado"] = True
             ESTADO_RENDER["exito"] = True
 
@@ -534,20 +540,24 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
         finally:
             ESTADO_RENDER["en_progreso"] = False
 
-    def ejecutar_compilacion_en_segundo_plano(self, videos: List[Path], salida: Path):
+    def ejecutar_compilacion_en_segundo_plano(self, videos: List[Path], salida: Path, formato: str = "16:9"):
         """Ejecuta la compilación de múltiples videos en segundo plano."""
         global ESTADO_RENDER
         ESTADO_RENDER["en_progreso"] = True
         ESTADO_RENDER["progreso"] = 30
-        ESTADO_RENDER["mensaje"] = f"Compilando {len(videos)} videos..."
-        ESTADO_RENDER["logs"] = [f"📦 Uniendo {len(videos)} videos en '{salida.name}'..."]
+        ancho, alto = video_editor.obtener_dimensiones_formato(formato)
+        ESTADO_RENDER["mensaje"] = f"Compilando {len(videos)} videos en {formato} ({ancho}x{alto})..."
+        ESTADO_RENDER["logs"] = [
+            f"📦 Uniendo {len(videos)} videos en '{salida.name}'...",
+            f"📐 Formato de compilación: {formato} ({ancho}x{alto} @ 24fps)"
+        ]
         ESTADO_RENDER["finalizado"] = False
 
         try:
-            video_editor.compilar_videos_terminados(lista_videos=videos, ruta_salida=salida)
+            video_editor.compilar_videos_terminados(lista_videos=videos, ruta_salida=salida, formato=formato)
             ESTADO_RENDER["progreso"] = 100
             ESTADO_RENDER["mensaje"] = "Compilación completada exitosamente"
-            ESTADO_RENDER["logs"].append(f"🎉 Video largo generado: {salida.resolve()}")
+            ESTADO_RENDER["logs"].append(f"🎉 Video compilado generado: {salida.resolve()}")
             ESTADO_RENDER["finalizado"] = True
             ESTADO_RENDER["exito"] = True
         except Exception as e:

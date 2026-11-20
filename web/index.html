@@ -60,8 +60,19 @@
     <!-- Panel Central: Vista Previa Smartphone 9:16 -->
     <div class="preview-panel">
       
-      <!-- Barra superior de ajustes de audio y texto -->
+      <!-- Barra superior de ajustes de audio, texto y formato -->
       <div class="preview-controls-bar">
+        <!-- Selector de Formato / Aspect Ratio -->
+        <div class="config-item">
+          <label for="selectFormato" title="Relación de aspecto: 9:16 para Shorts/TikTok o 16:9 para videos normales largos de YouTube">📐 Formato:</label>
+          <select id="selectFormato" class="form-control" style="width: auto; padding: 4px 8px; font-weight: 600;">
+            <option value="9:16" selected>📱 9:16 Vertical (Shorts & TikTok)</option>
+            <option value="16:9">🖥️ 16:9 Horizontal (YouTube Normal 720p)</option>
+            <option value="16:9-fhd">🖥️ 16:9 Full HD (YouTube 1080p)</option>
+            <option value="1:1">⏹️ 1:1 Cuadrado (Instagram)</option>
+          </select>
+        </div>
+
         <div class="config-item">
           <label>🗣️ Voz TTS:</label>
           <select id="selectVoz" class="form-control" style="width: auto; padding: 4px 8px;">
@@ -109,10 +120,10 @@
         </div>
       </div>
 
-      <!-- Escenario con Mockup Smartphone -->
+      <!-- Escenario con Mockup Adaptable (Smartphone o Pantalla Panorámica) -->
       <div class="preview-stage">
-        <div class="phone-mockup">
-          <div class="phone-notch"></div>
+        <div class="phone-mockup" id="previewMockup">
+          <div class="phone-notch" id="phoneNotch"></div>
           <div class="phone-screen" id="pantallaPreview">
             <video id="videoPreview" loop muted playsinline style="display: none;"></video>
             <div id="screenPlaceholder" class="screen-placeholder">
@@ -133,8 +144,8 @@
             <span style="font-weight: 700;">LÍNEA DE TIEMPO MULTIPISTA</span>
             <span class="time-indicator" id="duracionEstimada">Duración aprox: ~40s</span>
           </div>
-          <div style="font-size: 11px; color: var(--text-muted);">
-            Vertical 720x1280 @ 24fps • H.264 + AAC 128k
+          <div style="font-size: 11px; color: var(--text-muted);" id="formatoEspecificaciones">
+            Vertical 720x1280 (9:16) @ 24fps • H.264 + AAC 128k
           </div>
         </div>
 
@@ -244,6 +255,15 @@
       <div class="form-group">
         <label>Nombre del video final compilado:</label>
         <input type="text" id="compiladorNombreSalida" class="form-control" value="compilacion_larga.mp4">
+      </div>
+      <div class="form-group">
+        <label>📐 Formato / Relación de Aspecto del Video:</label>
+        <select id="compiladorFormato" class="form-control" style="font-weight: 600;">
+          <option value="16:9" selected>🖥️ 16:9 Horizontal (Recomendado para YouTube Normal / Videos Largos 720p)</option>
+          <option value="16:9-fhd">🖥️ 16:9 Full HD (YouTube Normal 1080p)</option>
+          <option value="9:16">📱 9:16 Vertical (Shorts & TikTok 720x1280)</option>
+          <option value="1:1">⏹️ 1:1 Cuadrado (Instagram 1080x1080)</option>
+        </select>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btnCerrarCompilador">Cancelar</button>
