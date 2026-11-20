@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor de Videos Infantiles 3D - YouTube Shorts & TikTok</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Encabezado Superior -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🎬</div>
+      <div>
+        <h1>Video Studio Kids <span>9:16 Shorts & TikTok</span></h1>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Selector de Canal / Espacio de Trabajo -->
+      <div class="channel-selector">
+        <label for="selectCanal">Canal:</label>
+        <select id="selectCanal">
+          <!-- Canales cargados dinámicamente -->
+        </select>
+        <button class="btn btn-secondary" id="btnConfigurarRutaCanal" title="Cambiar la carpeta de este canal en tu PC" style="padding: 3px 8px; font-size: 11px;">📂 Ubicación</button>
+        <label for="selectProyecto">Proyecto:</label>
+        <select id="selectProyecto">
+          <!-- Proyectos cargados dinámicamente -->
+        </select>
+        <button class="btn btn-secondary" id="btnNuevoProyecto" title="Crear nuevo proyecto o canal">➕ Nuevo</button>
+      </div>
+
+      <!-- Botón de Modo Compilado -->
+      <button class="btn btn-secondary" id="btnAbrirCompilador">📦 Modo Compilado</button>
+
+      <!-- Botón de Acción Principal -->
+      <button class="btn btn-success" id="btnComenzarEdicion">
+        <span>🚀</span> Comenzar Edición
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal -->
+  <div class="main-container">
+
+    <!-- Panel Izquierdo: Gestión de Escenas y Guion -->
+    <div class="scenes-panel">
+      <div class="panel-header">
+        <h2>Escenas del Video (Guion)</h2>
+        <button class="btn btn-secondary" id="btnGuardarGuion" style="padding: 4px 10px; font-size: 11px;">💾 Guardar Guion</button>
+      </div>
+
+      <div class="scenes-list" id="contenedorEscenas">
+        <!-- Tarjetas de escenas inyectadas dinámicamente -->
+      </div>
+    </div>
+
+    <!-- Panel Central: Vista Previa Smartphone 9:16 -->
+    <div class="preview-panel">
+      
+      <!-- Barra superior de ajustes de audio y texto -->
+      <div class="preview-controls-bar">
+        <div class="config-item">
+          <label>🗣️ Voz TTS:</label>
+          <select id="selectVoz" class="form-control" style="width: auto; padding: 4px 8px;">
+            <option value="es-MX-DaliaNeural">es-MX-DaliaNeural (Amable, Niños)</option>
+            <option value="es-MX-JorgeNeural">es-MX-JorgeNeural (Cálida, Niños)</option>
+            <option value="es-CO-SalomeNeural">es-CO-SalomeNeural (Alegre, Cuentos)</option>
+            <option value="es-ES-ElviraNeural">es-ES-ElviraNeural (Español España)</option>
+            <option value="es-US-PalomaNeural">es-US-PalomaNeural (Neutro)</option>
+          </select>
+        </div>
+
+        <!-- Control de Volumen del Video Original -->
+        <div class="config-item">
+          <label title="Controla el sonido original de la animación 3D">🔊 Video Original:</label>
+          <select id="selectVolumenVideo" class="form-control" style="width: auto; padding: 4px 6px;">
+            <option value="0">0% (Silenciado)</option>
+            <option value="0.10">10% (Muy suave)</option>
+            <option value="0.25" selected>25% (Fondo)</option>
+            <option value="0.50">50% (Medio)</option>
+            <option value="1.0">100% (Normal)</option>
+          </select>
+        </div>
+
+        <!-- Control de Volumen de la Narración -->
+        <div class="config-item">
+          <label title="Controla el volumen de la narración o audio incorporado">🎙️ Narración:</label>
+          <select id="selectVolumenVoz" class="form-control" style="width: auto; padding: 4px 6px;">
+            <option value="1.5" selected>150% (Alta y Clara)</option>
+            <option value="1.0">100% (Normal)</option>
+            <option value="2.0">200% (Muy potente)</option>
+            <option value="0.5">50% (Baja)</option>
+            <option value="0">0% (Silenciada)</option>
+          </select>
+        </div>
+
+        <!-- Botón/Casilla para Desactivar o Activar Voz en Off -->
+        <div class="config-item">
+          <input type="checkbox" id="checkSinVoz">
+          <label for="checkSinVoz" style="cursor: pointer;" title="Marca esta casilla para omitir la narración / voz en off">🔇 Sin voz en off</label>
+        </div>
+
+        <div class="config-item">
+          <input type="checkbox" id="checkSinTexto">
+          <label for="checkSinTexto" style="cursor: pointer;">Sin texto en pantalla</label>
+        </div>
+      </div>
+
+      <!-- Escenario con Mockup Smartphone -->
+      <div class="preview-stage">
+        <div class="phone-mockup">
+          <div class="phone-notch"></div>
+          <div class="phone-screen" id="pantallaPreview">
+            <video id="videoPreview" loop muted playsinline style="display: none;"></video>
+            <div id="screenPlaceholder" class="screen-placeholder">
+              <div style="font-size: 38px; margin-bottom: 10px;">🧸</div>
+              <div>Vista Previa 9:16</div>
+              <div style="font-size: 11px; margin-top: 6px; color: var(--text-dim);">Haz clic en una escena o pon a reproducir para previsualizar</div>
+            </div>
+            <!-- Capa de texto sobreimpreso en vivo -->
+            <div id="screenOverlayText" class="screen-overlay-text">A</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel Inferior: Línea de Tiempo (Timeline) -->
+      <div class="timeline-panel">
+        <div class="timeline-header">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-weight: 700;">LÍNEA DE TIEMPO MULTIPISTA</span>
+            <span class="time-indicator" id="duracionEstimada">Duración aprox: ~40s</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted);">
+            Vertical 720x1280 @ 24fps • H.264 + AAC 128k
+          </div>
+        </div>
+
+        <div class="timeline-body">
+          <!-- Pista 1: Video -->
+          <div class="track-row">
+            <div class="track-label">🎬 Video (3D)</div>
+            <div class="track-content" id="pistaVideo">
+              <!-- Clips de video -->
+            </div>
+          </div>
+
+          <!-- Pista 2: Voz en Off (TTS) -->
+          <div class="track-row">
+            <div class="track-label">🎙️ Voz en Off</div>
+            <div class="track-content" id="pistaAudio">
+              <!-- Clips de audio -->
+            </div>
+          </div>
+
+          <!-- Pista 3: Texto en Pantalla -->
+          <div class="track-row">
+            <div class="track-label">📝 Texto</div>
+            <div class="track-content" id="pistaTexto">
+              <!-- Clips de texto -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Modal de Renderizado y Progreso en Vivo -->
+  <div class="render-overlay" id="overlayRender">
+    <div class="render-modal">
+      <h3 id="renderTitulo">⚙️ Procesando y Renderizando Video...</h3>
+      <p id="renderEstado" style="font-size: 13px; color: var(--text-muted);">Iniciando motor FFmpeg y edge-tts...</p>
+      
+      <div class="progress-container">
+        <div class="progress-bar" id="renderProgressBar"></div>
+      </div>
+
+      <div class="render-log" id="renderLogOutput"></div>
+
+      <div id="renderRutaSalida" style="font-size: 12px; color: var(--accent-color); word-break: break-all; display: none;"></div>
+
+      <div id="renderAcciones" style="display: none; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+        <button class="btn btn-secondary" id="btnCerrarRender">Cerrar</button>
+        <button class="btn btn-secondary" id="btnDescargarVideoFinal">⬇️ Descargar Video</button>
+        <button class="btn btn-primary" id="btnAbrirCarpetaSalida">📂 Ver en Carpeta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Nuevo Proyecto / Video con Contador y Fecha -->
+  <div class="modal" id="modalNuevoProyecto">
+    <div class="modal-content" style="width: 480px;">
+      <h3>📁 Nuevo Video para Canal</h3>
+      
+      <div class="form-group">
+        <label>Canal / Espacio de Trabajo:</label>
+        <input type="text" id="nuevoCanalNombre" class="form-control" placeholder="Ej: kids studio o CanalPequi">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px;">
+        <div class="form-group">
+          <label>Contador:</label>
+          <input type="number" id="nuevoNumeroVideo" class="form-control" value="19" min="1">
+        </div>
+        <div class="form-group">
+          <label>Nombre Corto del Video:</label>
+          <input type="text" id="nuevoNombreCorto" class="form-control" placeholder="Ej: pequi formas">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Fecha de Publicación:</label>
+        <input type="text" id="nuevaFechaPub" class="form-control" placeholder="Ej: 22 nov 26">
+      </div>
+
+      <div style="background: var(--bg-tertiary); padding: 10px; border-radius: var(--radius-sm); border: 1px dashed var(--border-color);">
+        <span style="font-size: 11px; color: var(--text-muted); display: block; font-weight: 600;">CARPETA QUE SE CREARÁ:</span>
+        <span id="previewNombreCarpeta" style="font-size: 13px; font-weight: bold; color: var(--accent-color); font-family: monospace;">v19 pequi formas 22 nov 26</span>
+        <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 4px;">Contendrá: /escenas, /narracion, guion.json y el video final con su título.</span>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelarNuevoProyecto">Cancelar</button>
+        <button class="btn btn-primary" id="btnConfirmarNuevoProyecto">Crear Carpeta de Video</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Modo Compilado -->
+  <div class="modal" id="modalCompilador">
+    <div class="modal-content" style="width: 560px;">
+      <h3>📦 Modo Compilado (Unir Videos Terminados)</h3>
+      <p style="font-size: 12px; color: var(--text-muted);">
+        Selecciona o ingresa los videos que deseas unir en un solo video largo continuo:
+      </p>
+      <div class="form-group">
+        <label>Rutas de videos a unir (un archivo por línea):</label>
+        <textarea id="compiladorListaVideos" class="form-control" style="min-height: 100px;" placeholder="C:\videos\video1.mp4&#10;C:\videos\video2.mp4"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Nombre del video final compilado:</label>
+        <input type="text" id="compiladorNombreSalida" class="form-control" value="compilacion_larga.mp4">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCerrarCompilador">Cancelar</button>
+        <button class="btn btn-success" id="btnEjecutarCompilacion">Comenzar Compilación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Configurar Ubicación de Carpeta en la PC -->
+  <div class="modal" id="modalConfigurarRuta">
+    <div class="modal-content" style="width: 520px;">
+      <h3>📂 Ubicación del Canal en tu PC</h3>
+      <p style="font-size: 12px; color: var(--text-muted);">
+        Puedes indicar la carpeta exacta donde ya tienes ordenados tus videos para este canal:
+      </p>
+      <div class="form-group">
+        <label>Canal Seleccionado:</label>
+        <input type="text" id="configCanalNombre" class="form-control" readonly style="opacity: 0.8;">
+      </div>
+      <div class="form-group">
+        <label>Ruta completa de la carpeta en tu disco:</label>
+        <input type="text" id="configRutaCarpeta" class="form-control" placeholder="Ej: C:\Users\carlo\Documents\kids studio">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelarConfigRuta">Cancelar</button>
+        <button class="btn btn-primary" id="btnGuardarConfigRuta">Guardar Ubicación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inputs ocultos para carga de archivos de video y audio -->
+  <input type="file" id="inputArchivoEscena" accept="video/mp4" style="display: none;">
+  <input type="file" id="inputArchivoAudio" accept="audio/*" style="display: none;">
+
+  <!-- Contenedor de notificaciones flotantes (Toast) -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

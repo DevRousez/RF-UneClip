@@ -1,0 +1,26 @@
+{
+  "titulo": "Pequi aprende las vocales",
+  "voz": "es-MX-DaliaNeural",
+  "escenas": [
+    {
+      "video": "escena-1.mp4",
+      "texto_voz": "¡A! De avión. Pequi aprendió la A.",
+      "texto_pantalla": "A"
+    },
+    {
+      "video": "escena-2.mp4",
+      "texto_voz": "¡E! De elefante.",
+      "texto_pantalla": "E"
+    },
+    {
+      "video": "escena-3.mp4",
+      "texto_voz": "¡I! De iguana.",
+      "texto_pantalla": "I"
+    },
+    {
+      "video": "escena-4.mp4",
+      "texto_voz": "¡O de oso y U de uvas! Ya te sabes las vocales.",
+      "texto_pantalla": "O - U"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Binarios locales descargados
+ffmpeg/
+*.exe
+*.dll
+*.zip
+*.tar.gz
+
+# Proyectos, videos y audios generados
+canales/
+salida/
+temp/
+tmp/
+*.mp4
+*.mp3
+*.wav
+*.mkv
+
+# Configuración local de rutas
+config.json
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
