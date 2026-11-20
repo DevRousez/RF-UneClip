@@ -117,11 +117,13 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
 
         # 6. Servir archivos multimedia (videos / audios) para vista previa
         if path.startswith("/media/"):
-            partes = path[len("/media/"):].split("/")
+            # Quitar prefijo y decodificar ruta completa
+            path_limpio = urllib.parse.unquote(path[len("/media/"):])
+            partes = path_limpio.split("/")
             if len(partes) >= 3:
-                canal = urllib.parse.unquote(partes[0])
-                proyecto = urllib.parse.unquote(partes[1])
-                nombre_archivo = urllib.parse.unquote("/".join(partes[2:]))
+                canal = partes[0]
+                proyecto = partes[1]
+                nombre_archivo = "/".join(partes[2:])
                 carpeta_canal = video_editor.obtener_ruta_canal(canal)
                 posibles_rutas = [
                     carpeta_canal / proyecto / nombre_archivo,
@@ -145,6 +147,7 @@ class VideoEditorHandler(SimpleHTTPRequestHandler):
                             if cand.is_file():
                                 self.servir_archivo_local(cand)
                                 return
+                print(f"[AVISO] Archivo multimedia no encontrado: '{nombre_archivo}' en {carpeta_canal / proyecto}")
             self.send_error(404, "Archivo no encontrado")
             return
 
@@ -658,7 +661,7 @@ def iniciar_servidor():
     servidor = HTTPServer(("127.0.0.1", PUERTO), VideoEditorHandler)
     url = f"http://127.0.0.1:{PUERTO}"
     print("=" * 70)
-    print("🌟 INTERFAZ GRÁFICA DE EDICIÓN DE VIDEOS INICIADA")
+    print("🌟 INTERFAZ GRÁFICA DE EDICIÓN DE VIDEOS INICIADA (v3.6 - Streaming Activo)")
     print(f"👉 Abre en tu navegador: {url}")
     print("=" * 70)
     

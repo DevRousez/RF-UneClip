@@ -127,7 +127,7 @@ def obtener_ruta_canal(nombre_canal: str) -> Path:
         p = Path(ruta_cfg).resolve()
         p.mkdir(parents=True, exist_ok=True)
         return p
-    p = (Path("canales") / nombre_canal).resolve()
+    p = (Path(__file__).parent / "canales" / nombre_canal).resolve()
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -144,7 +144,7 @@ def vincular_ruta_canal(nombre_canal: str, ruta_carpeta: str) -> Path:
 
 # Carpeta base por defecto para workspaces / canales:
 def obtener_directorio_canales_defecto() -> Path:
-    return Path("canales").resolve()
+    return (Path(__file__).parent / "canales").resolve()
 
 # Buscar fuentes disponibles según el sistema operativo
 def obtener_fuente_por_defecto() -> str:
